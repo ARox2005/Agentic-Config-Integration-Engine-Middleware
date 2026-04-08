@@ -2,14 +2,14 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-COPY middleware/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir uvicorn python-dotenv
 
 # Ensure configs directory exists for tenant JSON storage
 RUN mkdir -p configs
 
-COPY middleware/ /app/
+COPY . /app/
 
 EXPOSE 7860
 
