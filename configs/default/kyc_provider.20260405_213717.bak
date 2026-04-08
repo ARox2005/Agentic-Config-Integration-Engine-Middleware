@@ -1,0 +1,24 @@
+{
+  "integration_metadata": {
+    "target_system": "KYC Provider",
+    "api_version": "v1.0"
+  },
+  "service_classification": {
+    "priority": "mandatory",
+    "reason": "KYC verification is required before loan approval"
+  },
+  "security_config": {
+    "auth_type": "Bearer",
+    "credential_vault_reference": "ENV.KYC_PROVIDER_KEY",
+    "target_url": "http://localhost:8004/mock-kyc/verify"
+  },
+  "schema_transformation_rules": {
+    "request_mapping": {
+      "full_name": "$.applicant_data.firstName + ' ' + $.applicant_data.lastName",
+      "date_of_birth": "$.applicant_data.dateOfBirth",
+      "pan_number": "$.applicant_data.panNumber",
+      "aadhaar_last4": "$.applicant_data.aadhaarLast4"
+    },
+    "response_logic": "if $.kyc_verified == false then return 'REJECT'"
+  }
+}
