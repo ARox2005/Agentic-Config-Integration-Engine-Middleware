@@ -219,3 +219,51 @@ async def simulate_gateway(request: SimulateRequest):
             "7_upstream_status": response.status_code,
         },
     }
+
+@router.post("/api/gateway/deploy/{service_name}")
+async def deploy_remote_config(service_name: str, request: Request, tenant_id: str = "default"):
+    """Receives a config blueprint over HTTP and saves it to the local configs folder."""
+    try:
+        config = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    # Sanitize service name
+    safe_name = "".join(c for c in service_name.lower().replace(" ", "_") if c.isalnum() or c == "_")
+    
+    tenant_configs_dir = CONFIGS_DIR / tenant_id
+    tenant_configs_dir.mkdir(parents=True, exist_ok=True)
+    
+    config_path = tenant_configs_dir / f"{safe_name}.json"
+    
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+        
+    return {
+        "status": "success", 
+        "message": f"Config '{tenant_id}/{safe_name}.json' deployed successfully.", 
+        "path": str(config_path)
+    }
+
+@router.delete("/api/gateway/configs")
+async def reset_remote_configs(tenant_id: Optional[str] = None):
+    """Deletes deployed config files remotely."""
+    deleted = []
+    
+    if tenant_id:
+        tenant_dir = CONFIGS_DIR / tenant_id
+        if tenant_dir.exists():
+            for config_file in tenant_dir.glob("*.json"):
+                config_file.unlink()
+                deleted.append(f"{tenant_id}/{config_file.name}")
+    else:
+        if CONFIGS_DIR.exists():
+            for config_file in CONFIGS_DIR.glob("*.json"):
+                config_file.unlink()
+                deleted.append(config_file.name)
+            for tenant_dir in CONFIGS_DIR.iterdir():
+                if tenant_dir.is_dir():
+                    for config_file in tenant_dir.glob("*.json"):
+                        config_file.unlink()
+                        deleted.append(f"{tenant_dir.name}/{config_file.name}")
+                        
+    return {"status": "configs_cleared", "deleted": deleted, "count": len(deleted)}
